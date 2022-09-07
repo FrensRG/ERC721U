@@ -1,2 +1,14 @@
-[ci]
-fuzz-runs = 10_000
+# The Default Profile
+[profile.default]
+solc_version = '0.8.16'
+auto_detect_solc = false
+optimizer = true
+optimizer_runs = 1_000_00
+fuzz_runs = 1_000
+remappings = [
+  "@libstringutils=lib/LibStringUtils/src/",
+]
+
+# Extreme Fuzzing CI Profile :P
+[profile.ci]
+fuzz_runs = 100_000
