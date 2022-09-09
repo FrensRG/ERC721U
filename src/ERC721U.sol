@@ -365,13 +365,9 @@ contract ERC721U {
                 ++_balanceOf[genesisOwner.owner].numberBurned;
             }
 
-            _ownerOf[tokenId] = GenesisOwner(
-                address(0),
-                uint64(block.timestamp),
-                0,
-                true,
-                true
-            );
+            _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
+            _ownerOf[tokenId].burned = true;
+
             delete getApproved[tokenId];
             emit Transfer(genesisOwner.owner, address(0), tokenId);
         } else {
