@@ -57,7 +57,7 @@ contract WrongReturnDataERC721Recipient is ERC721TokenReceiver {
 
 contract NonERC721Recipient {}
 
-contract ERC721Test is DSTestPlus {
+contract ERC721UTest is DSTestPlus {
     MockERC721 token;
 
     function setUp() public {
