@@ -1,38 +1,73 @@
-# <h1 align="center"> Forge Template </h1>
+<!-- ABOUT THE PROJECT -->
 
-**Template repository for getting started quickly with Foundry projects**
+## About The Project
 
-![Github Actions](https://github.com/foundry-rs/forge-template/workflows/CI/badge.svg)
+The goal of ERC721U is to provide a fully compliant implementation of IERC721 with significant gas savings for minting single NFTs. This project and implementation will be updated regularly and will continue to stay up to date with best practices.
 
-## Getting Started
+The [FrensReasearchGroup](https://twitter.com/FrensRG) team created ERC721U for its sale on TBA. We wanted to create something for collection of smaller size or in other words genesis collection to also leverage from potential gas savings when it comes to minting. And with this ERC implementation all all of those collection to potentially be some of the cheapest of the market.
 
-Click "Use this template" on [GitHub](https://github.com/foundry-rs/forge-template) to create a new repository with this repo as the initial state.
+For more information on how ERC721A works under the hood, please visit our [blog](MEDIUM_ARITICLE_HERE).
 
-Or, if your repo already exists, run:
+**FrensRG is not liable for any outcomes as a result of using ERC721A.** DYOR.
+
+## Installation
+
 ```sh
-forge init
-forge build
-forge test
+
+forge install Raiden1411/ERC721U
+
 ```
 
-## Writing your first test
+<!-- USAGE EXAMPLES -->
 
-All you need is to `import forge-std/Test.sol` and then inherit it from your test contract. Forge-std's Test contract comes with a pre-instatiated [cheatcodes environment](https://book.getfoundry.sh/cheatcodes/), the `vm`. It also has support for [ds-test](https://book.getfoundry.sh/reference/ds-test.html)-style logs and assertions. Finally, it supports Hardhat's [console.log](https://github.com/brockelmore/forge-std/blob/master/src/console.sol). The logging functionalities require `-vvvv`.
+## Usage
+
+Once installed, you can use the contracts in the library by importing them:
 
 ```solidity
-pragma solidity 0.8.10;
+pragma solidity ^0.8.4;
 
-import "forge-std/Test.sol";
+import "ERC721U/src/ERC721U.sol";
 
-contract ContractTest is Test {
-    function testExample() public {
-        vm.roll(100);
-        console.log(1);
-        emit log("hi");
-        assertTrue(true);
+contract U.D.O is ERC721U {
+    constructor() ERC721A("UDO", "UDO") {}
+
+    function mint(address to) external payable {
+        // `_mint`'s now only takes the address argument since `tokenId` will be the uint160 representation of the minting address.
+        _mint(msg.sender);
     }
 }
 ```
+
+<!-- CONTRIBUTING -->
+
+## Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+<!-- LICENSE -->
+
+## License
+
+Distributed under the MIT License. See `LICENSE.txt` for more information.
+
+<!-- CONTACT -->
+
+## Contact
+- 0xRaiden (maintainer) - [@0xRaiden_](https://twitter.com/0xRaiden_)
+
+Project Link: [https://github.com/Raiden1411/ERC721U](https://github.com/Raiden1411/ERC721U)
+
 
 ## Development
 
