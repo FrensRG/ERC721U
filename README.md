@@ -8,7 +8,7 @@ The [FrensReasearchGroup](https://twitter.com/FrensRG) team created ERC721U for 
 
 For more information on how ERC721A works under the hood, please visit our [blog](MEDIUM_ARITICLE_HERE).
 
-**FrensRG is not liable for any outcomes as a result of using ERC721A.** DYOR.
+**FrensRG is not liable for any outcomes as a result of using ERC721U.** DYOR.
 
 ## Installation
 
