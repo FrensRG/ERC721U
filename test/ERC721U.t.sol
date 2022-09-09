@@ -89,6 +89,33 @@ contract ERC721Test is DSTestPlus {
         assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xCAFE));
     }
 
+    function testMintAndTransferGenesis() public {
+        token.mint(address(0xBEEF));
+        token.mint(address(0xCAFE));
+        hevm.prank(address(0xBEEF));
+        token.transferFrom(
+            address(0xBEEF),
+            address(0xCAFE),
+            uint160(address(0xBEEF))
+        );
+        assertEq(token.balanceOf(address(0xCAFE)), 2);
+        assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xCAFE));
+        hevm.startPrank(address(0xCAFE));
+        token.transferFrom(
+            address(0xCAFE),
+            address(0xBEEF),
+            uint160(address(0xCAFE))
+        );
+        token.transferFrom(
+            address(0xCAFE),
+            address(0xBEEF),
+            uint160(address(0xBEEF))
+        );
+        hevm.stopPrank();
+
+        assertEq(token.balanceOf(address(0xCAFE)), 0);
+    }
+
     function testBurn() public {
         token.mint(address(0xBEEF));
         token.burn(uint160(address(0xBEEF)));
