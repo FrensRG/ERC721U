@@ -275,13 +275,9 @@ contract ERC721U {
                     true
                 );
 
-                _ownerOf[tokenId] = GenesisOwner(
-                    to,
-                    uint64(block.timestamp),
-                    0,
-                    true,
-                    false
-                );
+                _ownerOf[tokenId].owner = to;
+                _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
+                _ownerOf[tokenId].mintedBalance = 0;
             }
 
             delete getApproved[tokenId];
