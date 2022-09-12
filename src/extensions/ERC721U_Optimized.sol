@@ -104,7 +104,7 @@ contract ERC721U is IERC721U {
         override
         returns (string memory)
     {
-        require(_exists(tokenId), "NON_EXISTENT_TOKEN");
+        if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
 
         string memory baseURI = _baseURI();
         return
@@ -329,17 +329,15 @@ contract ERC721U is IERC721U {
     ) public payable virtual override {
         transferFrom(from, to, tokenId);
 
-        require(
-            to.code.length == 0 ||
+        if (to.code.length != 0)
+            if (
                 ERC721TokenReceiver(to).onERC721Received(
                     msg.sender,
                     from,
                     tokenId,
                     ""
-                ) ==
-                ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
+                ) != ERC721TokenReceiver.onERC721Received.selector
+            ) revert TransferToNonERC721ReceiverImplementer();
     }
 
     function safeTransferFrom(
@@ -350,17 +348,15 @@ contract ERC721U is IERC721U {
     ) public payable virtual override {
         transferFrom(from, to, tokenId);
 
-        require(
-            to.code.length == 0 ||
+        if (to.code.length != 0)
+            if (
                 ERC721TokenReceiver(to).onERC721Received(
                     msg.sender,
                     from,
                     tokenId,
                     data
-                ) ==
-                ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
+                ) != ERC721TokenReceiver.onERC721Received.selector
+            ) revert TransferToNonERC721ReceiverImplementer();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -419,16 +415,18 @@ contract ERC721U is IERC721U {
             delete getApproved[tokenId];
             emit Transfer(from, address(0), tokenId);
         } else {
-            uint256 balance = uint64(_packedBalanceOf[from]) +
-                ((_packedOwnerOf[tokenId] >> _BITPOS_MINTED_BALANCE) &
-                    _BITMASK_MINTED_BALANCE);
-            uint256 numberBurned = (_packedBalanceOf[from] >> _BITPOS_BALANCE) &
-                _BITMASK_MINTED_BALANCE;
             unchecked {
+                uint256 balance = uint64(_packedBalanceOf[from]) +
+                    ((_packedOwnerOf[tokenId] >> _BITPOS_MINTED_BALANCE) &
+                        _BITMASK_MINTED_BALANCE);
+                uint256 numberBurned = (_packedBalanceOf[from] >>
+                    _BITPOS_BALANCE) & _BITMASK_MINTED_BALANCE;
+
                 _packedOwnerOf[tokenId] = _packOwnershipData(
                     address(0),
                     _BITMASK_BURNED
                 );
+
                 _packedBalanceOf[from] =
                     --balance |
                     (++numberBurned << _BITPOS_BALANCE) |
@@ -451,32 +449,28 @@ contract ERC721U is IERC721U {
     function _safeMint(address to) internal virtual {
         _mint(to);
 
-        require(
-            to.code.length == 0 ||
+        if (to.code.length != 0)
+            if (
                 ERC721TokenReceiver(to).onERC721Received(
                     msg.sender,
                     address(0),
                     uint160(to),
                     ""
-                ) ==
-                ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
+                ) != ERC721TokenReceiver.onERC721Received.selector
+            ) revert TransferToNonERC721ReceiverImplementer();
     }
 
     function _safeMint(address to, bytes memory data) internal virtual {
         _mint(to);
 
-        require(
-            to.code.length == 0 ||
+        if (to.code.length != 0)
+            if (
                 ERC721TokenReceiver(to).onERC721Received(
                     msg.sender,
                     address(0),
                     uint160(to),
                     data
-                ) ==
-                ERC721TokenReceiver.onERC721Received.selector,
-            "UNSAFE_RECIPIENT"
-        );
+                ) != ERC721TokenReceiver.onERC721Received.selector
+            ) revert TransferToNonERC721ReceiverImplementer();
     }
 }
