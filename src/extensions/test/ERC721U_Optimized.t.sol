@@ -123,6 +123,22 @@ contract ERC721UTestOptimized is DSTestPlus {
         assertEq(token.balanceOf(address(0xBEEF)), 0);
     }
 
+    function testMintBurnTransfer() public {
+        token.mint(address(0xBEEF));
+        token.burn(uint160(address(0xBEEF)));
+
+        token.mint(address(0xCAFE));
+        hevm.prank(address(0xCAFE));
+        token.transferFrom(
+            address(0xCAFE),
+            address(0xBEEF),
+            uint160(address(0xCAFE))
+        );
+
+        assertEq(token.balanceOf(address(0xBEEF)), 1);
+        assertEq(token.ownerOf(uint160(address(0xCAFE))), address(0xBEEF));
+    }
+
     function testNumberBurned() public {
         token.mint(address(0xBEEF));
         token.burn(uint160(address(0xBEEF)));
