@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "./IERC721U.sol";
 import {LibStringUtils} from "lib/LibStringUtils/src/LibStringUtils.sol";
 
 abstract contract ERC721TokenReceiver {
@@ -14,46 +15,38 @@ abstract contract ERC721TokenReceiver {
     }
 }
 
-contract ERC721U {
+contract ERC721U is IERC721U {
     using LibStringUtils for uint256;
 
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
+    // =============================================================
+    //                            STRUCTS
+    // =============================================================
 
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 indexed id
-    );
-
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 indexed id
-    );
-
-    event ApprovalForAll(
-        address indexed owner,
-        address indexed operator,
-        bool approved
-    );
-
-    /*//////////////////////////////////////////////////////////////
-                                 STRUCTS
-    //////////////////////////////////////////////////////////////*/
-
+    /**
+     * @dev Struct used in ownerOf mapping to keep track of ownership and minted balance
+     * This way we can do just one SSTORE to save gas on mint
+     */
     struct GenesisOwner {
+        //Token owner
         address owner;
+        //when the ownership started
         uint64 startTimestamp;
+        //Balance after minting which will always be 1
         uint16 mintedBalance;
-        bool hasMinted;
+        //If the token is burned
         bool burned;
     }
 
+    /**
+     * @dev Struct used in balanceOf mapping to keep track of ownership and minted balance
+     * This way we can do just one SSTORE to save gas on mint
+     */
     struct GenesisBalance {
+        //Number of owned tokens. This will update  on first transfer to another EOA or ERC721Receiver
         uint64 balance;
+        //Number of tokens burned
         uint16 numberBurned;
+        //If the mapping is initialized
         bool initialized;
     }
 
@@ -134,6 +127,8 @@ contract ERC721U {
                         TOKEN COUNTING OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
+    //Start counter to keep track of total supply and minted supply.
+    //Starts at 1 because it saves gas for first minter
     function _startCounter() internal view virtual returns (uint256) {
         return 1;
     }
@@ -164,12 +159,13 @@ contract ERC721U {
 
     function balanceOf(address owner) public view virtual returns (uint256) {
         require(owner != address(0), "ZERO_ADDRESS");
-        return
-            _balanceOf[owner].balance + _ownerOf[uint160(owner)].mintedBalance;
-    }
-
-    function _hasMinted(address owner) internal view virtual returns (bool) {
-        return _ownerOf[uint160(owner)].hasMinted;
+        //Overflow is incredibly unrealistic
+        unchecked {
+            //Adds both values to reveal real balance in cases the genesis minter still has the token but acquired more tokens.
+            return
+                _balanceOf[owner].balance +
+                _ownerOf[uint160(owner)].mintedBalance;
+        }
     }
 
     function _numberBurned(address owner) internal view returns (uint256) {
@@ -190,7 +186,11 @@ contract ERC721U {
         virtual
         returns (address owner)
     {
-        require((owner = _ownerOf[tokenId].owner) != address(0), "NOT_MINTED");
+        require(
+            (owner = _ownerOf[tokenId].owner) != address(0) &&
+                !_ownerOf[tokenId].burned,
+            "NOT_EXISTANT_TOKEN"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -253,19 +253,23 @@ contract ERC721U {
                 msg.sender == getApproved[tokenId],
             "NOT_AUTHORIZED"
         );
-
+        //Check if the balance mapping has been initialized.
         if (_balanceOf[to].initialized) {
+            //Updates the mapping and updates the owner.
             unchecked {
                 --_balanceOf[from].balance;
                 ++_balanceOf[to].balance;
             }
 
             _ownerOf[tokenId].owner = to;
+            _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
 
             delete getApproved[tokenId];
 
             emit Transfer(from, to, tokenId);
         } else {
+            // Means the person transfering is one of the genesis minters.
+            //Initializes the mapping and cleans the minted balance and updates the owner.
             GenesisBalance memory genesisBalance = _balanceOf[to];
             unchecked {
                 _balanceOf[to] = GenesisBalance(
@@ -337,11 +341,11 @@ contract ERC721U {
         require(_ownerOf[tokenId].owner == address(0), "ALREADY_MINTED");
 
         // Counter overflow is incredibly unrealistic.
+        // No need to initialized the burned false since the default is false.
         unchecked {
             _ownerOf[tokenId].owner = to;
             _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
             _ownerOf[tokenId].mintedBalance = 1;
-            _ownerOf[tokenId].hasMinted = true;
 
             ++_currentIndex;
         }
@@ -367,6 +371,8 @@ contract ERC721U {
             delete getApproved[tokenId];
             emit Transfer(genesisOwner.owner, address(0), tokenId);
         } else {
+            // Means the person burning is one of the genesis minters.
+            // Initializes the mapping and cleans the minted balance and updates the token to a burned one.
             unchecked {
                 --_ownerOf[tokenId].mintedBalance;
                 ++_balanceOf[genesisOwner.owner].numberBurned;

@@ -76,6 +76,13 @@ contract ERC721UTestOptimized is DSTestPlus {
         assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xBEEF));
     }
 
+    function testFailBurnOwner() public {
+        token.mint(address(0xBEEF));
+        token.burn(uint160(address(0xBEEF)));
+
+        emit log_address(token.ownerOf(uint160(address(0xBEEF))));
+    }
+
     function testMintAndTransfer() public {
         token.mint(address(0xBEEF));
         token.mint(address(0xCAFE));

@@ -187,8 +187,10 @@ contract ERC721U is IERC721U {
         override
         returns (address owner)
     {
-        if ((owner = address(uint160(_packedOwnerOf[tokenId]))) == address(0))
-            revert OwnerZeroAddress();
+        if (
+            (owner = address(uint160(_packedOwnerOf[tokenId]))) == address(0) ||
+            _packedOwnerOf[tokenId] & _BITMASK_BURNED != 0
+        ) revert OwnerQueryForNonexistentToken();
     }
 
     function _packOwnershipData(address owner, uint256 extra)
@@ -423,7 +425,7 @@ contract ERC721U is IERC721U {
                     _BITPOS_BALANCE) & _BITMASK_MINTED_BALANCE;
 
                 _packedOwnerOf[tokenId] = _packOwnershipData(
-                    address(0),
+                    from,
                     _BITMASK_BURNED
                 );
 
