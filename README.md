@@ -30,7 +30,7 @@ pragma solidity ^0.8.4;
 import "ERC721U/src/ERC721U.sol";
 
 contract U.D.O is ERC721U {
-    constructor() ERC721A("UDO", "UDO") {}
+    constructor() ERC721U("UDO", "UDO") {}
 
     function mint() external payable {
         // `_mint`'s now only takes the address argument since `tokenId` will be the uint160 representation of the minting address.
