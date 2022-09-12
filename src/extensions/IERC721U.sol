@@ -25,6 +25,11 @@ interface IERC721U {
     error MintToZeroAddress();
 
     /**
+     * Cannot mint to same address.
+     */
+    error AddressAlreadyMinted();
+
+    /**
      * The quantity of tokens minted must be more than zero.
      */
     error MintZeroQuantity();
@@ -59,6 +64,16 @@ interface IERC721U {
      * The token does not exist.
      */
     error URIQueryForNonexistentToken();
+
+    /**
+     * The token does not exist.
+     */
+    error BurnedQueryForNonexistentToken();
+
+    /**
+     * The token does not exist.
+     */
+    error OwnerZeroAddress();
 
     // =============================================================
     //                         TOKEN COUNTERS
@@ -153,7 +168,7 @@ interface IERC721U {
         address to,
         uint256 tokenId,
         bytes calldata data
-    ) external;
+    ) external payable;
 
     /**
      * @dev Equivalent to `safeTransferFrom(from, to, tokenId, '')`.
@@ -162,7 +177,7 @@ interface IERC721U {
         address from,
         address to,
         uint256 tokenId
-    ) external;
+    ) external payable;
 
     /**
      * @dev Transfers `tokenId` from `from` to `to`.
@@ -184,7 +199,7 @@ interface IERC721U {
         address from,
         address to,
         uint256 tokenId
-    ) external;
+    ) external payable;
 
     /**
      * @dev Gives permission to `to` to transfer `tokenId` token to another account.
@@ -200,7 +215,7 @@ interface IERC721U {
      *
      * Emits an {Approval} event.
      */
-    function approve(address to, uint256 tokenId) external;
+    function approve(address to, uint256 tokenId) external payable;
 
     /**
      * @dev Approve or remove `operator` as an operator for the caller.

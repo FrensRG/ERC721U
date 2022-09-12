@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "./IERC721U.sol";
 import {LibStringUtils} from "lib/LibStringUtils/src/LibStringUtils.sol";
 
 abstract contract ERC721TokenReceiver {
@@ -14,48 +15,33 @@ abstract contract ERC721TokenReceiver {
     }
 }
 
-contract ERC721U {
+contract ERC721U is IERC721U {
     using LibStringUtils for uint256;
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 indexed id
-    );
-
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 indexed id
-    );
-
-    event ApprovalForAll(
-        address indexed owner,
-        address indexed operator,
-        bool approved
-    );
 
     /*//////////////////////////////////////////////////////////////
                                  STRUCTS
     //////////////////////////////////////////////////////////////*/
 
-    struct GenesisOwner {
-        address owner;
-        uint64 startTimestamp;
-        uint16 mintedBalance;
-        bool hasMinted;
-        bool burned;
-    }
+    uint256 private constant _BITPOS_ADDRESS = 160;
 
-    struct GenesisBalance {
-        uint64 balance;
-        uint16 numberBurned;
-        bool initialized;
-    }
+    uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
+
+    uint256 private constant _BITMASK_START_TIMESTAMP = (1 << 64) - 1;
+
+    uint256 private constant _BITPOS_MINTED_BALANCE = 224;
+
+    uint256 private constant _BITMASK_MINTED_BALANCE = (1 << 16) - 1;
+
+    uint256 private constant _BITMASK_BURNED = 1 << 240;
+
+    uint256 private constant _BITVALUE_MINTED_BALANCE = 1 << 224;
+
+    uint256 private constant _BITMASK_INITIALIZED = 1 << 80;
+
+    uint256 private constant _BITPOS_BALANCE = 64;
+
+    bytes32 private constant _TRANSFER_EVENT_SIGNATURE =
+        0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef;
 
     /*//////////////////////////////////////////////////////////////
                          METADATA STORAGE/LOGIC
@@ -77,9 +63,9 @@ contract ERC721U {
                       ERC721 BALANCE/OWNER STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    mapping(uint256 => GenesisOwner) private _ownerOf;
+    mapping(uint256 => uint256) private _packedOwnerOf;
 
-    mapping(address => GenesisBalance) private _balanceOf;
+    mapping(address => uint256) private _packedBalanceOf;
 
     /*//////////////////////////////////////////////////////////////
                          ERC721 APPROVAL STORAGE
@@ -103,11 +89,11 @@ contract ERC721U {
                             IERC721 METADATA
     //////////////////////////////////////////////////////////////*/
 
-    function name() public view virtual returns (string memory) {
+    function name() public view virtual override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view virtual returns (string memory) {
+    function symbol() public view virtual override returns (string memory) {
         return _symbol;
     }
 
@@ -115,6 +101,7 @@ contract ERC721U {
         public
         view
         virtual
+        override
         returns (string memory)
     {
         require(_exists(tokenId), "NON_EXISTENT_TOKEN");
@@ -138,7 +125,7 @@ contract ERC721U {
         return 1;
     }
 
-    function totalSupply() public view virtual returns (uint256) {
+    function totalSupply() public view virtual override returns (uint256) {
         // Counter underflow is impossible as _burnCounter cannot be incremented
         // more than `_currentIndex - _startTokenId()` times.
         unchecked {
@@ -162,35 +149,59 @@ contract ERC721U {
                         ADDRESS DATA OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    function balanceOf(address owner) public view virtual returns (uint256) {
-        require(owner != address(0), "ZERO_ADDRESS");
-        return
-            _balanceOf[owner].balance + _ownerOf[uint160(owner)].mintedBalance;
-    }
+    function balanceOf(address owner)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        if (owner == address(0)) revert OwnerZeroAddress();
 
-    function _hasMinted(address owner) internal view virtual returns (bool) {
-        return _ownerOf[uint160(owner)].hasMinted;
+        return
+            uint64(_packedBalanceOf[owner]) +
+            ((_packedOwnerOf[uint160(owner)] >> _BITPOS_MINTED_BALANCE) &
+                _BITMASK_MINTED_BALANCE);
     }
 
     function _numberBurned(address owner) internal view returns (uint256) {
-        return _balanceOf[owner].numberBurned;
+        return
+            (_packedBalanceOf[owner] >> _BITPOS_BALANCE) &
+            _BITMASK_MINTED_BALANCE;
     }
 
-    function _isBurned(uint256 tokenId) internal view returns (bool) {
-        return _ownerOf[tokenId].burned;
+    function _isBurned(uint256 tokenId) internal view returns (uint256) {
+        return _packedOwnerOf[tokenId] & _BITMASK_BURNED;
     }
 
     function _startTimestamp(uint256 tokenId) internal view returns (uint256) {
-        return _ownerOf[tokenId].startTimestamp;
+        return
+            (_packedOwnerOf[tokenId] >> _BITPOS_ADDRESS) &
+            _BITMASK_START_TIMESTAMP;
     }
 
     function ownerOf(uint256 tokenId)
         public
         view
         virtual
+        override
         returns (address owner)
     {
-        require((owner = _ownerOf[tokenId].owner) != address(0), "NOT_MINTED");
+        if ((owner = address(uint160(_packedOwnerOf[tokenId]))) == address(0))
+            revert OwnerZeroAddress();
+    }
+
+    function _packOwnershipData(address owner, uint256 extra)
+        private
+        view
+        returns (uint256 result)
+    {
+        assembly {
+            // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            owner := and(owner, _BITMASK_ADDRESS)
+            // `owner | (block.timestamp << _BITPOS_ADDRESS) | (mintedBalance << _MINTED_BALANCE | burned)`.
+            result := or(owner, or(shl(_BITPOS_ADDRESS, timestamp()), extra))
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -201,6 +212,7 @@ contract ERC721U {
         public
         view
         virtual
+        override
         returns (bool)
     {
         return
@@ -213,26 +225,51 @@ contract ERC721U {
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @dev Returns whether `msgSender` is equal to `approvedAddress` or `owner`.
+     */
+    function _isSenderApprovedOrOwner(
+        address approvedAddress,
+        address owner,
+        address msgSender
+    ) private pure returns (bool result) {
+        assembly {
+            // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            owner := and(owner, _BITMASK_ADDRESS)
+            // Mask `msgSender` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            msgSender := and(msgSender, _BITMASK_ADDRESS)
+            // `msgSender == owner || msgSender == approvedAddress`.
+            result := or(eq(msgSender, owner), eq(msgSender, approvedAddress))
+        }
+    }
+
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
         return
-            _ownerOf[tokenId].owner != address(0) && // If within bounds,
-            !_ownerOf[tokenId].burned; // and not burned.
+            address(uint160(_packedOwnerOf[tokenId])) != address(0) &&
+            _packedOwnerOf[tokenId] & _BITMASK_BURNED == 0;
     }
 
-    function approve(address spender, uint256 id) public payable virtual {
-        address owner = _ownerOf[id].owner;
+    function approve(address spender, uint256 tokenId)
+        public
+        payable
+        virtual
+        override
+    {
+        address owner = address(uint160(_packedOwnerOf[tokenId]));
+        if (msg.sender != owner)
+            if (!isApprovedForAll[owner][msg.sender])
+                revert ApprovalCallerNotOwnerNorApproved();
 
-        require(
-            msg.sender == owner || isApprovedForAll[owner][msg.sender],
-            "NOT_AUTHORIZED"
-        );
+        getApproved[tokenId] = spender;
 
-        getApproved[id] = spender;
-
-        emit Approval(owner, spender, id);
+        emit Approval(owner, spender, tokenId);
     }
 
-    function setApprovalForAll(address operator, bool approved) public virtual {
+    function setApprovalForAll(address operator, bool approved)
+        public
+        virtual
+        override
+    {
         isApprovedForAll[msg.sender][operator] = approved;
 
         emit ApprovalForAll(msg.sender, operator, approved);
@@ -242,41 +279,41 @@ contract ERC721U {
         address from,
         address to,
         uint256 tokenId
-    ) public payable virtual {
-        require(from == _ownerOf[tokenId].owner, "WRONG_FROM");
+    ) public payable virtual override {
+        if (from != address(uint160(_packedOwnerOf[tokenId])))
+            revert TransferFromIncorrectOwner();
 
-        require(to != address(0), "INVALID_RECIPIENT");
+        if (to == address(0)) revert TransferToZeroAddress();
 
-        require(
-            msg.sender == from ||
-                isApprovedForAll[from][msg.sender] ||
-                msg.sender == getApproved[tokenId],
-            "NOT_AUTHORIZED"
-        );
+        if (!_isSenderApprovedOrOwner(getApproved[tokenId], from, msg.sender))
+            if (!isApprovedForAll[from][msg.sender])
+                revert TransferCallerNotOwnerNorApproved();
 
-        if (_balanceOf[to].initialized) {
+        if (_packedBalanceOf[to] & _BITMASK_INITIALIZED != 0) {
             unchecked {
-                --_balanceOf[from].balance;
-                ++_balanceOf[to].balance;
+                --_packedBalanceOf[from];
+                ++_packedBalanceOf[to];
             }
-
-            _ownerOf[tokenId].owner = to;
+            _packedOwnerOf[tokenId] = _packOwnershipData(to, 0);
 
             delete getApproved[tokenId];
 
             emit Transfer(from, to, tokenId);
         } else {
-            GenesisBalance memory genesisBalance = _balanceOf[to];
             unchecked {
-                _balanceOf[to] = GenesisBalance(
-                    genesisBalance.balance + _ownerOf[tokenId].mintedBalance,
-                    genesisBalance.numberBurned,
-                    true
-                );
+                uint256 balance = uint64(_packedBalanceOf[from]) +
+                    ((_packedOwnerOf[tokenId] >> _BITPOS_MINTED_BALANCE) &
+                        _BITMASK_MINTED_BALANCE);
 
-                _ownerOf[tokenId].owner = to;
-                _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
-                _ownerOf[tokenId].mintedBalance = 0;
+                uint256 numberBurned = (_packedBalanceOf[to] >>
+                    _BITPOS_BALANCE) & _BITMASK_MINTED_BALANCE;
+
+                _packedBalanceOf[to] =
+                    balance |
+                    (numberBurned << _BITPOS_BALANCE) |
+                    _BITMASK_INITIALIZED;
+
+                _packedOwnerOf[tokenId] = _packOwnershipData(to, 0);
             }
 
             delete getApproved[tokenId];
@@ -289,7 +326,7 @@ contract ERC721U {
         address from,
         address to,
         uint256 tokenId
-    ) public payable virtual {
+    ) public payable virtual override {
         transferFrom(from, to, tokenId);
 
         require(
@@ -310,7 +347,7 @@ contract ERC721U {
         address to,
         uint256 tokenId,
         bytes calldata data
-    ) public payable virtual {
+    ) public payable virtual override {
         transferFrom(from, to, tokenId);
 
         require(
@@ -331,50 +368,75 @@ contract ERC721U {
     //////////////////////////////////////////////////////////////*/
 
     function _mint(address to) internal virtual {
-        require(to != address(0), "INVALID_RECIPIENT");
+        if (to == address(0)) revert MintToZeroAddress();
         uint256 tokenId = uint160(to);
-
-        require(_ownerOf[tokenId].owner == address(0), "ALREADY_MINTED");
+        if (address(uint160(_packedOwnerOf[tokenId])) != address(0))
+            revert AddressAlreadyMinted();
 
         // Counter overflow is incredibly unrealistic.
         unchecked {
-            _ownerOf[tokenId].owner = to;
-            _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
-            _ownerOf[tokenId].mintedBalance = 1;
-            _ownerOf[tokenId].hasMinted = true;
+            _packedOwnerOf[tokenId] = _packOwnershipData(
+                to,
+                _BITVALUE_MINTED_BALANCE
+            );
 
             ++_currentIndex;
         }
 
-        emit Transfer(address(0), to, tokenId);
+        uint256 toMasked;
+        assembly {
+            // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            toMasked := and(to, _BITMASK_ADDRESS)
+            // Emit the `Transfer` event.
+            log4(
+                0, // Start of data (0, since no data).
+                0, // End of data (0, since no data).
+                _TRANSFER_EVENT_SIGNATURE, // Signature.
+                0, // `address(0)`.
+                toMasked, // `to`.
+                tokenId // `tokenId`.
+            )
+        }
     }
 
     function _burn(uint256 tokenId) internal virtual {
-        GenesisOwner memory genesisOwner = _ownerOf[tokenId];
+        uint256 genesisOwner = _packedOwnerOf[tokenId];
 
-        require(!genesisOwner.burned, "ALREADY_BURNED");
-        require(genesisOwner.owner != address(0), "NOT_MINTED");
+        address from = address(uint160(genesisOwner));
 
-        if (_balanceOf[genesisOwner.owner].initialized) {
+        if (genesisOwner & _BITMASK_BURNED != 0)
+            revert BurnedQueryForNonexistentToken();
+
+        if (from == address(0)) revert BurnedQueryForNonexistentToken();
+
+        if (_packedBalanceOf[from] & _BITMASK_INITIALIZED != 0) {
             unchecked {
-                --_balanceOf[genesisOwner.owner].balance;
-                ++_balanceOf[genesisOwner.owner].numberBurned;
+                _packedBalanceOf[from] += (1 << _BITPOS_BALANCE) - 1;
             }
 
-            _ownerOf[tokenId].startTimestamp = uint64(block.timestamp);
-            _ownerOf[tokenId].burned = true;
+            _packedOwnerOf[tokenId] = _packOwnershipData(from, _BITMASK_BURNED);
 
             delete getApproved[tokenId];
-            emit Transfer(genesisOwner.owner, address(0), tokenId);
+            emit Transfer(from, address(0), tokenId);
         } else {
+            uint256 balance = uint64(_packedBalanceOf[from]) +
+                ((_packedOwnerOf[tokenId] >> _BITPOS_MINTED_BALANCE) &
+                    _BITMASK_MINTED_BALANCE);
+            uint256 numberBurned = (_packedBalanceOf[from] >> _BITPOS_BALANCE) &
+                _BITMASK_MINTED_BALANCE;
             unchecked {
-                --_ownerOf[tokenId].mintedBalance;
-                ++_balanceOf[genesisOwner.owner].numberBurned;
+                _packedOwnerOf[tokenId] = _packOwnershipData(
+                    address(0),
+                    _BITMASK_BURNED
+                );
+                _packedBalanceOf[from] =
+                    --balance |
+                    (++numberBurned << _BITPOS_BALANCE) |
+                    _BITMASK_INITIALIZED;
             }
-            _ownerOf[tokenId].burned = true;
 
             delete getApproved[tokenId];
-            emit Transfer(genesisOwner.owner, address(0), tokenId);
+            emit Transfer(from, address(0), tokenId);
         }
 
         unchecked {
