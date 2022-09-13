@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
 
-import {ERC721U} from "../../src/extensions/ERC721U_Optimized.sol";
+import {ERC721U} from "../../ERC721UBasic_Optimized.sol";
 
-contract MockERC721Optimized is ERC721U {
+contract MockERC721BasicOptimized is ERC721U {
     constructor(string memory _name, string memory _symbol)
         ERC721U(_name, _symbol)
     {}

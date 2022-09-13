@@ -595,9 +595,12 @@ contract ERC721UTestOptimized is DSTestPlus {
         bytes calldata data
     ) public {
         //address from = address(0xABCD);
-        if (from == address(0) || from == address(this)) from = address(0xBEEF);
         ERC721Recipient recipient = new ERC721Recipient();
-
+        if (
+            from == address(0) ||
+            from == address(this) ||
+            from == address(recipient)
+        ) from = address(0xBEEF);
         token.mint(from);
         uint256 id = uint160(address(from));
         hevm.prank(from);

@@ -18,6 +18,25 @@ forge install Raiden1411/ERC721U
 
 ```
 
+## Contracts
+
+```ml
+src
+├─extensions  
+   └─ Basic
+     └─ERC721UBasic_Optimized.sol - This contract doesn't track the    total supply neither the burnt tokens. Use this if you only care about gas savings.
+      ├─ test
+           └- ERC721UBasic_Optimized.t — Exhaustive Tests
+   └─ Optimized
+      └─ERC721U_Optimized.sol - This contract is the optimized version of ERC721U. It has everything that ERC721U.sol has but with  gas savings.
+      ├─ test
+           └- ERC721U_Optimized.t — Exhaustive Tests            
+├─ ERC721U — Main contract. Use this contract if you want readability from it.
+├─ IERC721U - Contract Interface
+test
+└- ERC721U.t — Exhaustive Tests
+```
+
 <!-- USAGE EXAMPLES -->
 
 ## Usage

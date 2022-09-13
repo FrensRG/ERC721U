@@ -4,9 +4,9 @@ pragma solidity ^0.8.15;
 import {DSTestPlus} from "./DSTestPlus.sol";
 import {DSInvariantTest} from "./DSInvariantTest.sol";
 
-import {MockERC721} from "./Mocks/MockERC721.sol";
+import {MockERC721BasicOptimized} from "./Mocks/MockERC721Basic_optimized.sol";
 
-import {ERC721TokenReceiver} from "../src/ERC721U.sol";
+import {ERC721TokenReceiver} from "../ERC721UBasic_Optimized.sol";
 
 contract ERC721Recipient is ERC721TokenReceiver {
     address public operator;
@@ -57,11 +57,11 @@ contract WrongReturnDataERC721Recipient is ERC721TokenReceiver {
 
 contract NonERC721Recipient {}
 
-contract ERC721UTest is DSTestPlus {
-    MockERC721 token;
+contract ERC721UTestOptimized is DSTestPlus {
+    MockERC721BasicOptimized token;
 
     function setUp() public {
-        token = new MockERC721("Token", "TKN");
+        token = new MockERC721BasicOptimized("Token", "TKN");
     }
 
     function invariantMetadata() public {
@@ -74,6 +74,13 @@ contract ERC721UTest is DSTestPlus {
 
         assertEq(token.balanceOf(address(0xBEEF)), 1);
         assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xBEEF));
+    }
+
+    function testFailBurnOwner() public {
+        token.mint(address(0xBEEF));
+        token.burn(uint160(address(0xBEEF)));
+
+        emit log_address(token.ownerOf(uint160(address(0xBEEF))));
     }
 
     function testMintAndTransfer() public {
@@ -150,7 +157,7 @@ contract ERC721UTest is DSTestPlus {
         token.mint(address(0xBEEF));
         token.burn(uint160(address(0xBEEF)));
 
-        assertTrue(token.isBurned(uint160(address(0xBEEF))));
+        assertTrue(token.isBurned(uint160(address(0xBEEF))) != 0);
     }
 
     function testApprove() public {
@@ -435,7 +442,10 @@ contract ERC721UTest is DSTestPlus {
     }
 
     function testMetadata(string memory name, string memory symbol) public {
-        MockERC721 tkn = new MockERC721(name, symbol);
+        MockERC721BasicOptimized tkn = new MockERC721BasicOptimized(
+            name,
+            symbol
+        );
 
         assertEq(tkn.name(), name);
         assertEq(tkn.symbol(), symbol);
