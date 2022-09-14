@@ -76,6 +76,19 @@ contract ERC721UTest is DSTestPlus {
         assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xBEEF));
     }
 
+    function testFailTransferAfterBurn() public {
+        token.mint(address(0xBEEF));
+        token.burn(uint160(address(0xBEEF)));
+
+        token.transferFrom(
+            address(0xBEEF),
+            address(0xCAFE),
+            uint160(address(0xBEEF))
+        );
+        assertEq(token.balanceOf(address(0xCAFE)), 1);
+        assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xCAFE));
+    }
+
     function testMintAndTransfer() public {
         token.mint(address(0xBEEF));
         token.mint(address(0xCAFE));

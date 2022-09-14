@@ -57,7 +57,7 @@ contract WrongReturnDataERC721Recipient is ERC721TokenReceiver {
 
 contract NonERC721Recipient {}
 
-contract ERC721UTestOptimized is DSTestPlus {
+contract ERC721UTestBasicOptimized is DSTestPlus {
     MockERC721BasicOptimized token;
 
     function setUp() public {
@@ -323,6 +323,19 @@ contract ERC721UTestOptimized is DSTestPlus {
         assertEq(to.from(), address(0));
         assertEq(to.id(), uint160(address(to)));
         assertBytesEq(to.data(), "testing 123");
+    }
+
+    function testFailTransferAfterBurn() public {
+        token.mint(address(0xBEEF));
+        token.burn(uint160(address(0xBEEF)));
+
+        token.transferFrom(
+            address(0xBEEF),
+            address(0xCAFE),
+            uint160(address(0xBEEF))
+        );
+        assertEq(token.balanceOf(address(0xCAFE)), 1);
+        assertEq(token.ownerOf(uint160(address(0xBEEF))), address(0xCAFE));
     }
 
     function testFailDoubleMint() public {
