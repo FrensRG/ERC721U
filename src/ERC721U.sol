@@ -362,7 +362,7 @@ contract ERC721U is IERC721U {
     function _burn(uint256 tokenId) internal virtual {
         GenesisOwner memory genesisOwner = _ownerOf[tokenId];
 
-        require(!genesisOwner.burned, "ALREADY_BURNED");
+        require(!genesisOwner.burned, "BURNED");
         require(genesisOwner.owner != address(0), "NOT_MINTED");
 
         if (_balanceOf[genesisOwner.owner].initialized) {
