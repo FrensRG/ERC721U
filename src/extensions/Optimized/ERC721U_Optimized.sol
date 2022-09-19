@@ -60,8 +60,21 @@ contract ERC721U is IERC721U {
                       ERC721 BALANCE/OWNER STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    // Mapping from token ID to ownership details
+    // Bits Layout:
+    // - [0..159]   `addr`
+    // - [160..223] `startTimestamp`
+    // - [224..239] `mintedBalance`
+    // - [240]      `burned`
+    // - [241..255] `extraData`
     mapping(uint256 => uint256) private _packedOwnerOf;
 
+    // Mapping from token ID to balance details
+    // Bits Layout:
+    // - [0..63]   `balance`
+    // - [64..79]  `numberMinted`
+    // - [80]      `initialized`
+    // - [81..255] `extraData`
     mapping(address => uint256) private _packedBalanceOf;
 
     /*//////////////////////////////////////////////////////////////
