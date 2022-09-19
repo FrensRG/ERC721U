@@ -4,9 +4,7 @@
 
 The goal of ERC721U is to provide a fully compliant implementation of IERC721 with significant gas savings for minting single NFTs. This project and implementation will be updated regularly and will continue to stay up to date with best practices.
 
-The [FrensReasearchGroup](https://twitter.com/FrensRG) team created ERC721U for its sale on TBA. We wanted to create something for collection of smaller size or in other words genesis collection to also leverage from potential gas savings when it comes to minting. And with this ERC implementation all all of those collection to potentially be some of the cheapest of the market.
-
-For more information on how ERC721A works under the hood, please visit our [blog](MEDIUM_ARITICLE_HERE).
+The [FrensReasearchGroup](https://twitter.com/FrensRG) team created ERC721U for its sale on TBA. We wanted to create something for collection of smaller size or in other words genesis collection to also leverage from potential gas savings when it comes to minting. And with this ERC implementation all of those collections would potentially be some of the cheapest of the market.
 
 **FrensRG is not liable for any outcomes as a result of using ERC721U.** DYOR.
 
@@ -26,11 +24,11 @@ src
    └─ Basic
      └─ERC721UBasic_Optimized.sol - This contract doesn't track the    total supply neither the burnt tokens. Use this if you only care about gas savings.
       ├─ test
-           └- ERC721UBasic_Optimized.t — Exhaustive Tests
+        └- ERC721UBasic_Optimized.t — Exhaustive Tests
    └─ Optimized
       └─ERC721U_Optimized.sol - This contract is the optimized version of ERC721U. It has everything that ERC721U.sol has but with  gas savings.
       ├─ test
-           └- ERC721U_Optimized.t — Exhaustive Tests            
+        └- ERC721U_Optimized.t — Exhaustive Tests            
 ├─ ERC721U — Main contract. Use this contract if you want readability from it.
 ├─ IERC721U - Contract Interface
 test
