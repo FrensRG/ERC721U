@@ -12,7 +12,7 @@ The [FrensReasearchGroup](https://twitter.com/FrensRG) team created ERC721U for 
 
 ```sh
 
-forge install Raiden1411/ERC721U
+forge install FrensRG/ERC721U
 
 ```
 
